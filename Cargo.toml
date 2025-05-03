@@ -1,0 +1,16 @@
+[package]
+name = "solvibe"
+version = "0.0.0"
+edition = "2024"
+description = "CLI tool for Solana templates"
+license = "MIT"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+dialoguer = "0.11"
+console = "0.15.11"
+indicatif = "0.17.11"
+
+[[bin]]
+name = "solvibe"
+path = "src/main.rs"
