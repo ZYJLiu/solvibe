@@ -22,12 +22,7 @@ pub fn handle_init(opts: InitOptions) {
     let fullstack_repo_kit = "https://github.com/ZYJLiu/nextjs-anchor-codama";
 
     if opts.client {
-        let dir: String = Input::with_theme(&ColorfulTheme::default())
-            .with_prompt("Enter directory name to clone into (default: starter)")
-            .default("starter".into())
-            .interact_text()
-            .unwrap();
-        client_install_flow(client_repo, &dir);
+        client_install_flow(client_repo);
     } else if opts.full {
         // Add selection between Kit and Web3js
         let fullstack_options = &["Kit", "Web3js"];
@@ -38,11 +33,7 @@ pub fn handle_init(opts: InitOptions) {
             .interact()
             .unwrap();
 
-        let dir: String = Input::with_theme(&ColorfulTheme::default())
-            .with_prompt("Enter directory name to clone into (default: starter)")
-            .default("starter".into())
-            .interact_text()
-            .unwrap();
+        let dir = get_directory_name();
 
         let repo_to_clone = match fullstack_choice {
             0 => fullstack_repo_kit,
@@ -70,13 +61,9 @@ pub fn handle_init(opts: InitOptions) {
                 println!("Cancelled.");
                 return;
             }
-            let dir: String = Input::with_theme(&ColorfulTheme::default())
-                .with_prompt("Enter directory name to clone into (default: starter)")
-                .default("starter".into())
-                .interact_text()
-                .unwrap();
+
             let action = match top_selection {
-                0 => client_install_flow(client_repo, &dir),
+                0 => client_install_flow(client_repo),
                 1 => {
                     // Add selection between Kit and Web3js
                     let fullstack_options = &["Kit", "Web3js"];
@@ -86,6 +73,8 @@ pub fn handle_init(opts: InitOptions) {
                         .items(fullstack_options)
                         .interact()
                         .unwrap();
+
+                    let dir = get_directory_name();
 
                     let repo_to_clone = match fullstack_choice {
                         0 => fullstack_repo_kit,
@@ -109,7 +98,15 @@ pub fn handle_init(opts: InitOptions) {
     }
 }
 
-fn client_install_flow(repo_url: &str, target_dir: &str) -> MenuAction {
+fn get_directory_name() -> String {
+    Input::with_theme(&ColorfulTheme::default())
+        .with_prompt("Enter directory name to clone into (default: starter)")
+        .default("starter".into())
+        .interact_text()
+        .unwrap()
+}
+
+fn client_install_flow(repo_url: &str) -> MenuAction {
     loop {
         // Main client options
         let main_options = &["All", "Typescript Client", "Rust Client", "Back", "Cancel"];
@@ -121,9 +118,10 @@ fn client_install_flow(repo_url: &str, target_dir: &str) -> MenuAction {
             .unwrap();
         match main_choice {
             0 => {
+                let dir = get_directory_name();
                 clone_and_install_subdirs(
                     repo_url,
-                    target_dir,
+                    &dir,
                     &[
                         "typescript/kit",
                         "typescript/web3js",
@@ -134,7 +132,7 @@ fn client_install_flow(repo_url: &str, target_dir: &str) -> MenuAction {
                 return MenuAction::Continue;
             }
             1 => {
-                let action = typescript_menu(repo_url, target_dir);
+                let action = typescript_menu(repo_url);
                 if action == MenuAction::Back {
                     continue;
                 } else {
@@ -142,7 +140,7 @@ fn client_install_flow(repo_url: &str, target_dir: &str) -> MenuAction {
                 }
             }
             2 => {
-                let action = rust_menu(repo_url, target_dir);
+                let action = rust_menu(repo_url);
                 if action == MenuAction::Back {
                     continue;
                 } else {
@@ -156,7 +154,7 @@ fn client_install_flow(repo_url: &str, target_dir: &str) -> MenuAction {
     }
 }
 
-fn typescript_menu(repo_url: &str, target_dir: &str) -> MenuAction {
+fn typescript_menu(repo_url: &str) -> MenuAction {
     loop {
         let ts_options = &["All", "Kit", "Web3.js", "Go Back", "Cancel"];
         let ts_choice = Select::with_theme(&ColorfulTheme::default())
@@ -167,19 +165,22 @@ fn typescript_menu(repo_url: &str, target_dir: &str) -> MenuAction {
             .unwrap();
         match ts_choice {
             0 => {
+                let dir = get_directory_name();
                 clone_and_install_subdirs(
                     repo_url,
-                    target_dir,
+                    &dir,
                     &["typescript/kit", "typescript/web3js"],
                 );
                 return MenuAction::Continue;
             }
             1 => {
-                clone_and_install_subdirs(repo_url, target_dir, &["typescript/kit"]);
+                let dir = get_directory_name();
+                clone_and_install_subdirs(repo_url, &dir, &["typescript/kit"]);
                 return MenuAction::Continue;
             }
             2 => {
-                clone_and_install_subdirs(repo_url, target_dir, &["typescript/web3js"]);
+                let dir = get_directory_name();
+                clone_and_install_subdirs(repo_url, &dir, &["typescript/web3js"]);
                 return MenuAction::Continue;
             }
             3 => return MenuAction::Back,
@@ -189,7 +190,7 @@ fn typescript_menu(repo_url: &str, target_dir: &str) -> MenuAction {
     }
 }
 
-fn rust_menu(repo_url: &str, target_dir: &str) -> MenuAction {
+fn rust_menu(repo_url: &str) -> MenuAction {
     loop {
         let rust_options = &["All", "Async (tokio)", "Sync", "Go Back", "Cancel"];
         let rust_choice = Select::with_theme(&ColorfulTheme::default())
@@ -200,15 +201,18 @@ fn rust_menu(repo_url: &str, target_dir: &str) -> MenuAction {
             .unwrap();
         match rust_choice {
             0 => {
-                clone_and_install_subdirs(repo_url, target_dir, &["rust/async", "rust/sync"]);
+                let dir = get_directory_name();
+                clone_and_install_subdirs(repo_url, &dir, &["rust/async", "rust/sync"]);
                 return MenuAction::Continue;
             }
             1 => {
-                clone_and_install_subdirs(repo_url, target_dir, &["rust/async"]);
+                let dir = get_directory_name();
+                clone_and_install_subdirs(repo_url, &dir, &["rust/async"]);
                 return MenuAction::Continue;
             }
             2 => {
-                clone_and_install_subdirs(repo_url, target_dir, &["rust/sync"]);
+                let dir = get_directory_name();
+                clone_and_install_subdirs(repo_url, &dir, &["rust/sync"]);
                 return MenuAction::Continue;
             }
             3 => return MenuAction::Back,
