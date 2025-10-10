@@ -18,7 +18,8 @@ enum MenuAction {
 
 pub fn handle_init(opts: InitOptions) {
     let client_repo = "https://github.com/ZYJLiu/solana-client";
-    let fullstack_repo = "https://github.com/solana-developers/anchor-web3js-nextjs";
+    let fullstack_repo_web3js = "https://github.com/solana-developers/anchor-web3js-nextjs";
+    let fullstack_repo_kit = "https://github.com/ZYJLiu/nextjs-anchor-codama";
 
     if opts.client {
         let dir: String = Input::with_theme(&ColorfulTheme::default())
@@ -28,19 +29,35 @@ pub fn handle_init(opts: InitOptions) {
             .unwrap();
         client_install_flow(client_repo, &dir);
     } else if opts.full {
+        // Add selection between Kit and Web3js
+        let fullstack_options = &["Kit", "Web3js"];
+        let fullstack_choice = Select::with_theme(&ColorfulTheme::default())
+            .with_prompt("Which fullstack template do you want to use?")
+            .default(0)
+            .items(fullstack_options)
+            .interact()
+            .unwrap();
+
         let dir: String = Input::with_theme(&ColorfulTheme::default())
             .with_prompt("Enter directory name to clone into (default: starter)")
             .default("starter".into())
             .interact_text()
             .unwrap();
-        println!("Cloning fullstack program from {}...", fullstack_repo);
-        clone_repo_into(fullstack_repo, &dir);
+
+        let repo_to_clone = match fullstack_choice {
+            0 => fullstack_repo_kit,
+            1 => fullstack_repo_web3js,
+            _ => fullstack_repo_web3js,
+        };
+
+        println!("Cloning fullstack program from {}...", repo_to_clone);
+        clone_repo_into(repo_to_clone, &dir);
     } else {
         // Top-level prompt: client or fullstack
         loop {
             let top_options = &[
                 "Client code (Typescript or Rust)",
-                "Fullstack Anchor program with Nextjs frontend",
+                "Fullstack Anchor program with Nextjs (Kit or Web3js)",
                 "Cancel",
             ];
             let top_selection = Select::with_theme(&ColorfulTheme::default())
@@ -61,8 +78,23 @@ pub fn handle_init(opts: InitOptions) {
             let action = match top_selection {
                 0 => client_install_flow(client_repo, &dir),
                 1 => {
-                    println!("Cloning fullstack program from {}...", fullstack_repo);
-                    clone_repo_into(fullstack_repo, &dir);
+                    // Add selection between Kit and Web3js
+                    let fullstack_options = &["Kit", "Web3js"];
+                    let fullstack_choice = Select::with_theme(&ColorfulTheme::default())
+                        .with_prompt("Which fullstack template do you want to use?")
+                        .default(0)
+                        .items(fullstack_options)
+                        .interact()
+                        .unwrap();
+
+                    let repo_to_clone = match fullstack_choice {
+                        0 => fullstack_repo_kit,
+                        1 => fullstack_repo_web3js,
+                        _ => fullstack_repo_web3js,
+                    };
+
+                    println!("Cloning fullstack program from {}...", repo_to_clone);
+                    clone_repo_into(repo_to_clone, &dir);
                     MenuAction::Continue
                 }
                 _ => MenuAction::Cancel,
@@ -209,10 +241,7 @@ fn clone_and_install_subdirs(repo_url: &str, repo_name: &str, subdirs: &[&str]) 
     let mut instructions = Vec::new();
     // Helper: get language and template name from subdir string
     fn split_lang_template(sub: &str) -> Option<(&str, &str)> {
-        let mut parts = sub.splitn(2, '/');
-        let lang = parts.next()?;
-        let template = parts.next()?;
-        Some((lang, template))
+        sub.split_once('/')
     }
     // Group subdirs by language
     let mut lang_map: std::collections::HashMap<&str, Vec<&str>> = std::collections::HashMap::new();
@@ -246,9 +275,9 @@ fn clone_and_install_subdirs(repo_url: &str, repo_name: &str, subdirs: &[&str]) 
             let mut showed_instructions = false;
             if path.join("Cargo.toml").exists() {
                 instructions.push(format!(
-                    "{sep}\n{title}\n{sep}\n  cd {dir}\n  cargo r\n",
+                    "{sep}\nRust template: '{template}'\n{sep}\n  cd {dir}\n  cargo r\n",
                     sep = "-".repeat(30),
-                    title = format!("Rust template: '{}'", template),
+                    template = template,
                     dir = path.display()
                 ));
                 showed_instructions = true;
@@ -292,9 +321,9 @@ fn clone_and_install_subdirs(repo_url: &str, repo_name: &str, subdirs: &[&str]) 
                     }
                 }
                 instructions.push(format!(
-                    "{sep}\n{title}\n{sep}\n  cd {dir}\n  pnpm start\n",
+                    "{sep}\nTypescript template: '{template}'\n{sep}\n  cd {dir}\n  pnpm start\n",
                     sep = "-".repeat(30),
-                    title = format!("Typescript template: '{}'", template),
+                    template = template,
                     dir = path.display()
                 ));
                 showed_instructions = true;
@@ -334,9 +363,9 @@ fn clone_and_install_subdirs(repo_url: &str, repo_name: &str, subdirs: &[&str]) 
         let mut showed_instructions = false;
         if path.join("Cargo.toml").exists() {
             instructions.push(format!(
-                "{sep}\n{title}\n{sep}\n  cd {dir}\n  cargo r\n",
+                "{sep}\nRust template: '{sub}'\n{sep}\n  cd {dir}\n  cargo r\n",
                 sep = "-".repeat(30),
-                title = format!("Rust template: '{}'", sub),
+                sub = sub,
                 dir = path.display()
             ));
             showed_instructions = true;
@@ -349,7 +378,7 @@ fn clone_and_install_subdirs(repo_url: &str, repo_name: &str, subdirs: &[&str]) 
             pb.enable_steady_tick(Duration::from_millis(100));
             let status = Command::new("pnpm")
                 .arg("install")
-                .current_dir(&path)
+                .current_dir(path)
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())
                 .status();
@@ -380,9 +409,9 @@ fn clone_and_install_subdirs(repo_url: &str, repo_name: &str, subdirs: &[&str]) 
                 }
             }
             instructions.push(format!(
-                "{sep}\n{title}\n{sep}\n  cd {dir}\n  pnpm start\n",
+                "{sep}\nTypescript template: '{sub}'\n{sep}\n  cd {dir}\n  pnpm start\n",
                 sep = "-".repeat(30),
-                title = format!("Typescript template: '{}'", sub),
+                sub = sub,
                 dir = path.display()
             ));
             showed_instructions = true;
@@ -399,9 +428,9 @@ fn clone_and_install_subdirs(repo_url: &str, repo_name: &str, subdirs: &[&str]) 
             let mut showed_instructions = false;
             if path.join("Cargo.toml").exists() {
                 instructions.push(format!(
-                    "{sep}\n{title}\n{sep}\n  cd {dir}\n  cargo r\n",
+                    "{sep}\nRust template: '{sub}'\n{sep}\n  cd {dir}\n  cargo r\n",
                     sep = "-".repeat(30),
-                    title = format!("Rust template: '{}'", sub),
+                    sub = sub,
                     dir = path.display()
                 ));
                 showed_instructions = true;
@@ -445,9 +474,9 @@ fn clone_and_install_subdirs(repo_url: &str, repo_name: &str, subdirs: &[&str]) 
                     }
                 }
                 instructions.push(format!(
-                    "{sep}\n{title}\n{sep}\n  cd {dir}\n  pnpm start\n",
+                    "{sep}\nTypescript template: '{sub}'\n{sep}\n  cd {dir}\n  pnpm start\n",
                     sep = "-".repeat(30),
-                    title = format!("Typescript template: '{}'", sub),
+                    sub = sub,
                     dir = path.display()
                 ));
                 showed_instructions = true;
@@ -461,7 +490,7 @@ fn clone_and_install_subdirs(repo_url: &str, repo_name: &str, subdirs: &[&str]) 
         }
     }
     if !instructions.is_empty() {
-        println!("");
+        println!();
         println!("{}", style("====================").blue().bold());
         println!(
             "{}",
@@ -505,7 +534,7 @@ fn clone_repo_into(repo_url: &str, dir: &str) {
         }
     }
 
-    // If this is the anchor-web3js-nextjs repo, run pnpm and yarn in the right subdirs
+    // Handle different fullstack repos
     if repo_url.contains("anchor-web3js-nextjs") {
         let frontend_dir = Path::new(dir).join("frontend");
         let program_dir = Path::new(dir).join("program");
@@ -556,7 +585,7 @@ fn clone_repo_into(repo_url: &str, dir: &str) {
         }
 
         // Print instructions for running frontend and testing program
-        println!("");
+        println!();
         println!("{}", style("====================").blue().bold());
         println!(
             "{}",
@@ -571,6 +600,43 @@ fn clone_repo_into(repo_url: &str, dir: &str) {
         println!("{}", style("To test the Anchor program:").green().bold(),);
         println!("  cd {}/program", dir);
         println!("  anchor test\n");
+        println!("{}", style("====================").blue().bold());
+    } else if repo_url.contains("nextjs-anchor-codama") {
+        // Handle Kit repo as monorepo - just run pnpm install at root
+        let repo_dir = Path::new(dir);
+
+        println!("Running 'pnpm install' in {:?}...", repo_dir);
+        let pb = ProgressBar::new_spinner();
+        pb.set_message("pnpm install (monorepo)");
+        pb.set_style(ProgressStyle::with_template("{spinner} {msg}").unwrap());
+        pb.enable_steady_tick(Duration::from_millis(100));
+        let status = Command::new("pnpm")
+            .arg("install")
+            .current_dir(repo_dir)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+        pb.finish_and_clear();
+        match status {
+            Ok(s) if s.success() => println!("✅ pnpm install succeeded"),
+            Ok(s) => eprintln!("❌ pnpm install failed (status: {})", s),
+            Err(e) => eprintln!("❌ pnpm install error: {}", e),
+        }
+
+        // Print instructions for running Kit project
+        println!();
+        println!("{}", style("====================").blue().bold());
+        println!(
+            "{}",
+            style("How to run your fullstack Kit project:")
+                .bold()
+                .underlined()
+        );
+        println!("{}\n", style("====================").blue().bold());
+        println!("{}", style("To start the project:").green().bold());
+        println!("  cd {}", dir);
+        println!("  pnpm start");
+        println!("\n  {}", style("(This will build the program, generate Codama clients, run tests, and start the frontend)").italic().dim());
         println!("{}", style("====================").blue().bold());
     }
 }
